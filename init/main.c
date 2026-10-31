@@ -1234,3 +1234,21 @@ static noinline void __init kernel_init_freeable(void)
 	integrity_load_keys();
 	load_default_modules();
 }
+
+/* DEBUG (temporary): reboot into recovery 45 s after boot when
+ * "dbg_autoreboot" is on the command line, so pstore keeps this boot's log. */
+#include <linux/workqueue.h>
+#include <linux/reboot.h>
+static void dbg_reboot_fn(struct work_struct *w)
+{
+	pr_emerg("DEBUG: 45s timeout reached, rebooting to recovery\n");
+	kernel_restart("recovery");
+}
+static DECLARE_DELAYED_WORK(dbg_reboot_work, dbg_reboot_fn);
+static int __init dbg_reboot_init(void)
+{
+	if (strstr(boot_command_line, "dbg_autoreboot"))
+		schedule_delayed_work(&dbg_reboot_work, 45 * HZ);
+	return 0;
+}
+late_initcall(dbg_reboot_init);
